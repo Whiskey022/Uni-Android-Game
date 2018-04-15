@@ -24,6 +24,9 @@ import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.OpponentsManager;
 import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.Player;
 import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.PointsText;
 import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.Road;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.RoadAbuDhabi;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.RoadMonaco;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.RoadMonza;
 
 public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, SensorEventListener{
 
@@ -33,11 +36,13 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
     private Bitmap playerImage;
     private float playerX;
     private float playerY;
+    private Road road;
     private SensorManager sensorManager;
     private ArrayList<GameObject> gameObjects;
     private String carStatus = "None";
+    private Boolean collided = false;
 
-    public GamePanel(Context context){
+    public GamePanel(Context context, String track, String level){
         super(context);
         getHolder().addCallback(this);
 
@@ -46,12 +51,22 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
 
         gameObjects = new ArrayList<>();
 
-        Road road = new Road(getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
+        road = null;
+        switch (track){
+            case "monza":
+                road = new RoadMonza(getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
+                break;
+            case "monaco":
+                road = new RoadMonaco(getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
+                break;
+            default:
+                road = new RoadAbuDhabi(getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
+        }
         GameSpeedometer gameSpeedometer = new GameSpeedometer(speed);
         GameTimer gameTimer = new GameTimer();
         PointsText pointsText = new PointsText();
         Bitmap coinImage = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.coin), 50, 50, false);
-        CoinsManager coinsManager = new CoinsManager(coinImage, road.getRoadStartX(), road.getRoadEndX(), getResources().getDisplayMetrics().heightPixels,  getResources().getDisplayMetrics().heightPixels/5, pointsText);
+        CoinsManager coinsManager = new CoinsManager(coinImage, road.getRoadStartX(), road.getRoadEndX(), getResources().getDisplayMetrics().heightPixels,  getResources().getDisplayMetrics().heightPixels/5, level, pointsText);
         gameObjects.add(road);
         gameObjects.add(gameSpeedometer);
         gameObjects.add(gameTimer);
@@ -131,7 +146,7 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
             if (obj.getClass() == CoinsManager.class){
                 ((CoinsManager)obj).updateCollectionField((int)player.getX(), (int)playerY, (int)player.getX() + playerImage.getWidth(), (int)playerY + playerImage.getHeight());
             } else if (obj.getClass() == OpponentsManager.class){
-                boolean collided = ((OpponentsManager)obj).checkCollision((int)player.getX(), (int)playerY,
+                collided = ((OpponentsManager)obj).checkCollision((int)player.getX(), (int)playerY,
                         (int)player.getX() + player.getImage().getWidth(), (int)playerY + player.getImage().getWidth());
                 if (collided) {
                     endGame();
@@ -155,11 +170,18 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        float newX = -event.values[0]/(float)Math.pow(speed, 0.01) + player.getX();
+        float newX = -event.values[0]/(float)Math.pow(speed, 0.1) + player.getX();
         if (event.values[0] > 1 && newX > 0) {
             player.update(newX);
         } else if (event.values[0] < -1 && newX + playerImage.getWidth() < getResources().getDisplayMetrics().widthPixels) {
             player.update(newX);
+        }
+
+        String roadStatus = road.checkRoadPosition(player.getX(), player.getX() + playerImage.getWidth());
+        if (roadStatus == "Gravel") {
+            carStatus = "Brake";
+        } else if (roadStatus == "Wall") {
+            collided = true;
         }
     }
 
@@ -193,6 +215,8 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
             } else if (gameObject.getClass() == GameTimer.class){
                 intent.putExtra("MINUTES", ((GameTimer)gameObject).getMinutes());
                 intent.putExtra("SECONDS", ((GameTimer)gameObject).getSeconds());
+            } else if (gameObject.getClass().getSuperclass() == Road.class){
+                intent.putExtra("TRACK", ((Road)gameObject).getRoadType());
             }
         }
         getContext().startActivity(intent);

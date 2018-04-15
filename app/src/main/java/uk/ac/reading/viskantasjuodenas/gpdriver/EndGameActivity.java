@@ -70,6 +70,7 @@ public class EndGameActivity extends AppCompatActivity {
         newURL += "&minutes=" + String.valueOf(getIntent().getIntExtra("MINUTES", 0));
         newURL += "&seconds=" + String.valueOf(getIntent().getIntExtra("SECONDS", 0));
         newURL += "&level=" + getIntent().getStringExtra("LEVEL");
+        newURL += "&track=" + getIntent().getStringExtra("TRACK");
 
         return newURL;
     }

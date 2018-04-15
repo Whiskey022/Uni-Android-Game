@@ -16,6 +16,7 @@ public class CoinsManager implements GameObject{
     private int gap;
     private ArrayList<Coin> coinsList;
     private ArrayList<Integer> coinHistoryX;
+    private ArrayList<Coin> loadedCoins;
     private Coin coin;
     private int distanceTravelled = 0;
     private int previousX;
@@ -25,7 +26,7 @@ public class CoinsManager implements GameObject{
     private int carEndY = 0;
     private PointsText pointsText;
 
-    public CoinsManager(Bitmap coinImage, int minWidth, int maxWidth, int displayHeight, int gap, PointsText pointsText){
+    public CoinsManager(Bitmap coinImage, int minWidth, int maxWidth, int displayHeight, int gap, String level, PointsText pointsText){
         this.coinImage = coinImage;
         this.minWidth = minWidth;
         this.maxWidth = maxWidth;
@@ -33,8 +34,9 @@ public class CoinsManager implements GameObject{
         this.gap = gap;
         this.pointsText = pointsText;
 
-        previousX = (maxWidth - minWidth)/2;
+        previousX = new Random().nextInt(maxWidth - minWidth - coinImage.getWidth()) + minWidth;
         coinsList = new ArrayList<>();
+        loadCoinsList(level);
         coinHistoryX = new ArrayList<>();
     }
 
@@ -85,8 +87,14 @@ public class CoinsManager implements GameObject{
         distanceTravelled += value;
 
         if (distanceTravelled > gap){
-            generateCoin();
-            coinsList.add(coin);
+            if (loadedCoins.size() != 0){
+                coinsList.add(loadedCoins.get(0));
+                coinHistoryX.add(loadedCoins.get(0).getX());
+                loadedCoins.remove(0);
+            } else {
+                generateCoin();
+                coinsList.add(coin);
+            }
             distanceTravelled -= gap;
         }
 
@@ -110,5 +118,18 @@ public class CoinsManager implements GameObject{
         }
 
         return ret;
+    }
+
+    private void loadCoinsList(String level){
+        if (level != null && level != "") {
+            ArrayList<Coin> coins = new ArrayList<>();
+            String[] xPositions = level.split(",");
+            for (String xPos: xPositions){
+                coins.add(new Coin(coinImage, Integer.valueOf(xPos), 0));
+            }
+            loadedCoins = coins;
+        } else {
+            loadedCoins = new ArrayList<>();
+        }
     }
 }

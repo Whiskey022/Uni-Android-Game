@@ -20,7 +20,8 @@ public class MainActivity extends AppCompatActivity {
         playTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                setContentView(new GamePanel(self));
+                Intent intent = new Intent(self, TrackActivity.class);
+                startActivity(intent);
             }
         });
 
@@ -29,6 +30,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(self, ScoresActivity.class);
+                startActivity(intent);
+            }
+        });
+
+        TextView aboutTextView = findViewById(R.id.aboutText);
+        aboutTextView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(self, AboutActivity.class);
                 startActivity(intent);
             }
         });

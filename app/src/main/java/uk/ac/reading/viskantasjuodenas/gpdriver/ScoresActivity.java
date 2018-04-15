@@ -1,10 +1,10 @@
 package uk.ac.reading.viskantasjuodenas.gpdriver;
 
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -20,7 +20,7 @@ import java.net.URL;
 public class ScoresActivity extends AppCompatActivity{
 
     private TableLayout tableLayout;
-    private String[] keys = {"Username", "Coins", "Percentage"};
+    private String[] keys = {"Username", "Coins", "Percentage", "Track"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +52,7 @@ public class ScoresActivity extends AppCompatActivity{
                 System.out.println(jsonObject.toString());
                 if (jsonObject.getBoolean("Success")) {
                     for (int i = 0; i < jsonObject.getJSONObject("Values").length(); i++) {
-                        JSONObject jsonResult = jsonObject.getJSONObject("Values").getJSONObject(String.valueOf(i));
+                        final JSONObject jsonResult = jsonObject.getJSONObject("Values").getJSONObject(String.valueOf(i));
 
                         TableRow row = new TableRow(ScoresActivity.this);
 
@@ -71,12 +71,20 @@ public class ScoresActivity extends AppCompatActivity{
 
                         Button playButton = new Button(ScoresActivity.this);
                         playButton.setText("Play");
+                        playButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                try {
+                                    setContentView(new GamePanel(ScoresActivity.this, jsonResult.getString("Track"), jsonResult.getString("Level")));
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        });
                         row.addView(playButton);
 
                         tableLayout.addView(row);
                     }
-                }
-                if (jsonObject.getBoolean("Success")){
                     success = true;
                 }
             } catch (JSONException e) {
