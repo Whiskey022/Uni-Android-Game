@@ -1,6 +1,7 @@
 package uk.ac.reading.viskantasjuodenas.gpdriver;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -13,47 +14,75 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import java.util.ArrayList;
+
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.CoinsManager;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.GameObject;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.GameSpeedometer;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.GameTimer;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.OpponentsManager;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.Player;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.PointsText;
+import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.Road;
+
 public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, SensorEventListener{
 
     private MainThread thread;
-    private Player player;
-    private Road road;
     private float speed = 1;
+    private Player player;
+    private Bitmap playerImage;
     private float playerX;
-    private float degrees;
+    private float playerY;
     private SensorManager sensorManager;
-    private Sensor sensor;
+    private ArrayList<GameObject> gameObjects;
     private String carStatus = "None";
 
     public GamePanel(Context context){
         super(context);
         getHolder().addCallback(this);
 
+        //Setting up game thread
         thread = new MainThread(getHolder(), this);
 
+        gameObjects = new ArrayList<>();
+
+        Road road = new Road(getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
+        GameSpeedometer gameSpeedometer = new GameSpeedometer(speed);
+        GameTimer gameTimer = new GameTimer();
+        PointsText pointsText = new PointsText();
+        Bitmap coinImage = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.coin), 50, 50, false);
+        CoinsManager coinsManager = new CoinsManager(coinImage, road.getRoadStartX(), road.getRoadEndX(), getResources().getDisplayMetrics().heightPixels,  getResources().getDisplayMetrics().heightPixels/5, pointsText);
+        gameObjects.add(road);
+        gameObjects.add(gameSpeedometer);
+        gameObjects.add(gameTimer);
+        gameObjects.add(pointsText);
+        gameObjects.add(coinsManager);
+
+        //Opponents
+        Bitmap opponentImage = BitmapFactory.decodeResource(getResources(), R.drawable.mclaren);
+        opponentImage = Bitmap.createScaledBitmap(opponentImage, (int)(opponentImage.getWidth()*0.7), (int)(opponentImage.getHeight()*0.7), false);
+        OpponentsManager opponentsManager = new OpponentsManager(opponentImage, road.getRoadStartX(), road.getRoadEndX(), getResources().getDisplayMetrics().heightPixels);
+        gameObjects.add(opponentsManager);
+
+
+        //Setting up Player
+        playerImage = BitmapFactory.decodeResource(getResources(), R.drawable.ferrari);
+        playerImage = Bitmap.createScaledBitmap(playerImage, (int)(playerImage.getWidth()*0.7), (int)(playerImage.getHeight()*0.7), false);
         playerX = getResources().getDisplayMetrics().widthPixels/2;
+        playerY = (float)(getResources().getDisplayMetrics().heightPixels/1.5 - playerImage.getHeight()/2);
+        player = new Player(playerImage, playerX - playerImage.getWidth()/2, playerY);
+        gameObjects.add(player);
 
-        Bitmap image = BitmapFactory.decodeResource(getResources(), R.drawable.car);
-        image = Bitmap.createScaledBitmap(image, 150, 150, false);
-        player = new Player(image, playerX - image.getWidth()/2, getResources().getDisplayMetrics().widthPixels/2 - image.getHeight()/2);
-
-        road = new Road(getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
-
-        degrees = 0;
-
+        //Setting up accelerometer sensor
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
-
-        sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-
+        Sensor sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME);
 
         setFocusable(true);
     }
 
     @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-
-    }
+    public void surfaceCreated(SurfaceHolder holder) { }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
@@ -66,7 +95,7 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         boolean retry = true;
-        while (true) {
+        while (retry) {
             try {
                 thread.setRunning(false);
                 thread.join();
@@ -97,7 +126,21 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
 
     public void update() {
         controlSpeed();
-        road.update((int)speed);
+
+        for (GameObject obj: gameObjects){
+            if (obj.getClass() == CoinsManager.class){
+                ((CoinsManager)obj).updateCollectionField((int)player.getX(), (int)playerY, (int)player.getX() + playerImage.getWidth(), (int)playerY + playerImage.getHeight());
+            } else if (obj.getClass() == OpponentsManager.class){
+                boolean collided = ((OpponentsManager)obj).checkCollision((int)player.getX(), (int)playerY,
+                        (int)player.getX() + player.getImage().getWidth(), (int)playerY + player.getImage().getWidth());
+                if (collided) {
+                    endGame();
+                }
+            }
+            if(obj.getClass() != Player.class) {
+                obj.update((int) speed);
+            }
+        }
     }
 
     @Override
@@ -105,38 +148,53 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
         super.draw(canvas);
 
         canvas.drawColor(Color.WHITE);
-
-        road.draw(canvas);
-        player.draw(canvas);
+        for (GameObject obj : gameObjects){
+            obj.draw(canvas);
+        }
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (event.values[0] > 1) {
-            player.update(-event.values[0]/(float)Math.pow(speed, 0.2));
-            System.out.println(-event.values[0]/(float)Math.pow(speed, 0.2));
-        } else if (event.values[0] < -1) {
-            player.update(-event.values[0]/(float)Math.pow(speed, 0.2));
-            System.out.println(-event.values[0]/(float)Math.pow(speed, 0.2));
-        } else {
+        float newX = -event.values[0]/(float)Math.pow(speed, 0.01) + player.getX();
+        if (event.values[0] > 1 && newX > 0) {
+            player.update(newX);
+        } else if (event.values[0] < -1 && newX + playerImage.getWidth() < getResources().getDisplayMetrics().widthPixels) {
+            player.update(newX);
         }
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    public void onAccuracyChanged(Sensor sensor, int accuracy) { }
 
-    }
-
-    public void controlSpeed(){
+    private void controlSpeed(){
         switch (carStatus){
             case "Throttle":
-                speed += 0.1;
+                speed += 0.3 - speed*0.004;
                 break;
             case "Brake":
-                speed -= 0.3;
+                if (speed >= 1) {
+                    speed -= 0.4;
+                }
                 break;
             default:
                 break;
         }
+    }
+
+    private void endGame(){
+        thread.setRunning(false);
+        Intent intent = new Intent().setClass(getContext(), EndGameActivity.class);
+        for (GameObject gameObject: gameObjects){
+            if (gameObject.getClass() == PointsText.class){
+                intent.putExtra("COINS", ((PointsText)gameObject).getPoints());
+                intent.putExtra("PERCENTAGE", ((PointsText)gameObject).getPercentage());
+            } else if (gameObject.getClass() == CoinsManager.class){
+                intent.putExtra("LEVEL", ((CoinsManager)gameObject).getCoinsHistoryX());
+            } else if (gameObject.getClass() == GameTimer.class){
+                intent.putExtra("MINUTES", ((GameTimer)gameObject).getMinutes());
+                intent.putExtra("SECONDS", ((GameTimer)gameObject).getSeconds());
+            }
+        }
+        getContext().startActivity(intent);
     }
 }

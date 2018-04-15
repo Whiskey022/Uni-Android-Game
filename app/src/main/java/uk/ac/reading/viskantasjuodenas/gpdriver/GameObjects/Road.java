@@ -1,6 +1,5 @@
-package uk.ac.reading.viskantasjuodenas.gpdriver;
+package uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects;
 
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -53,13 +52,22 @@ public class Road implements GameObject{
         }
     }
 
-    public void update(int speed) {
+    @Override
+    public void update(float speed) {
         for (Rect marker : markers) {
-            int markerTop = (speed % displayHeight);
+            int markerTop = ((int)speed % displayHeight);
             marker.offset(0, markerTop);
             if (marker.top > displayHeight) {
                 marker.offset(0, - displayHeight - markerHeight - markerGap);
             }
         }
+    }
+
+    public int getRoadStartX(){
+        return roadStartX;
+    }
+
+    public int getRoadEndX(){
+        return roadEndX;
     }
 }
