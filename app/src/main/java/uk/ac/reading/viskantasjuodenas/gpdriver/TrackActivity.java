@@ -6,6 +6,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.TextView;
 
+/**
+ * Activity for the track selection
+ */
 public class TrackActivity extends AppCompatActivity {
 
     @Override
@@ -13,8 +16,10 @@ public class TrackActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tracks);
 
+        //Saving context
         final Context self = this;
 
+        //On Abu Dhabi track selection
         TextView abuDhabi = findViewById(R.id.abuDhabiText);
         abuDhabi.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -23,6 +28,7 @@ public class TrackActivity extends AppCompatActivity {
             }
         });
 
+        //On Monza track selection
         TextView monza = findViewById(R.id.monzaText);
         monza.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -31,6 +37,8 @@ public class TrackActivity extends AppCompatActivity {
             }
         });
 
+
+        //On Monaco track selection
         TextView monaco = findViewById(R.id.monacoText);
         monaco.setOnClickListener(new View.OnClickListener() {
             @Override

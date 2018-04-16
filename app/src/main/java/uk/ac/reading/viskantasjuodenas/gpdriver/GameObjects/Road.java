@@ -4,6 +4,10 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 
+
+/**
+ * Abstract Road class, draws itself and check if driver drove outside the track
+ */
 public abstract class Road implements GameObject{
 
     protected int displayWidth;
@@ -18,11 +22,25 @@ public abstract class Road implements GameObject{
     protected Rect[] markers;
     protected Paint paint;
 
+    /**
+     * Check if the driver is outside the track
+     * @param startX driver's object left side x
+     * @param endX driver's object right side x
+     * @return String if the driver drove outside the track
+     */
     abstract public String checkRoadPosition(float startX, float endX);
 
+    /**
+     * Draws road markers, the road itself, background colour
+     * @param canvas
+     */
     @Override
     public abstract void draw(Canvas canvas);
 
+    /**
+     * Draws road markers, and the road itself
+     * @param speed
+     */
     @Override
     public void update(float speed){
         for (Rect marker : markers) {

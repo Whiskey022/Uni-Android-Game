@@ -3,6 +3,9 @@ package uk.ac.reading.viskantasjuodenas.gpdriver;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
+/**
+ * Activity to display "About" description
+ */
 public class AboutActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {

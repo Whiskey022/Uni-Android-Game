@@ -7,6 +7,9 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 
+/**
+ * Activity for the main menu
+ */
 public class MainActivity extends AppCompatActivity {
 
     @Override
@@ -14,8 +17,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_menu);
 
+        //Save class context
         final Context self = this;
 
+        //On "Play" click
         TextView playTextView = findViewById(R.id.playText);
         playTextView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -25,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //On "HighScores" click
         TextView scoresTextView = findViewById(R.id.scoresText);
         scoresTextView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -34,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //On "About" click
         TextView aboutTextView = findViewById(R.id.aboutText);
         aboutTextView.setOnClickListener(new View.OnClickListener() {
             @Override

@@ -28,20 +28,28 @@ import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.RoadAbuDhabi;
 import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.RoadMonaco;
 import uk.ac.reading.viskantasjuodenas.gpdriver.GameObjects.RoadMonza;
 
+
+/**
+ * Class that controls the game - drawing, calculations
+ */
 public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, SensorEventListener{
 
     private MainThread thread;
     private float speed = 1;
     private Player player;
     private Bitmap playerImage;
-    private float playerX;
-    private float playerY;
     private Road road;
     private SensorManager sensorManager;
     private ArrayList<GameObject> gameObjects;
     private String carStatus = "None";
     private Boolean collided = false;
 
+    /**
+     *
+     * @param context Class context
+     * @param track Selected track
+     * @param level Loaded saved level if any
+     */
     public GamePanel(Context context, String track, String level){
         super(context);
         getHolder().addCallback(this);
@@ -51,6 +59,7 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
 
         gameObjects = new ArrayList<>();
 
+        //Road creation based on selected track
         road = null;
         switch (track){
             case "monza":
@@ -62,6 +71,8 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
             default:
                 road = new RoadAbuDhabi(getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
         }
+
+        //Initializing other game objects, adding all of them to the gameObjects arraylist
         GameSpeedometer gameSpeedometer = new GameSpeedometer(speed);
         GameTimer gameTimer = new GameTimer();
         PointsText pointsText = new PointsText();
@@ -73,18 +84,18 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
         gameObjects.add(pointsText);
         gameObjects.add(coinsManager);
 
-        //Opponents
+        //Initializing OpponentsManager, adding to the arraylist
         Bitmap opponentImage = BitmapFactory.decodeResource(getResources(), R.drawable.mclaren);
         opponentImage = Bitmap.createScaledBitmap(opponentImage, (int)(opponentImage.getWidth()*0.7), (int)(opponentImage.getHeight()*0.7), false);
         OpponentsManager opponentsManager = new OpponentsManager(opponentImage, road.getRoadStartX(), road.getRoadEndX(), getResources().getDisplayMetrics().heightPixels);
         gameObjects.add(opponentsManager);
 
 
-        //Setting up Player
+        //Setting up Player object
         playerImage = BitmapFactory.decodeResource(getResources(), R.drawable.ferrari);
         playerImage = Bitmap.createScaledBitmap(playerImage, (int)(playerImage.getWidth()*0.7), (int)(playerImage.getHeight()*0.7), false);
-        playerX = getResources().getDisplayMetrics().widthPixels/2;
-        playerY = (float)(getResources().getDisplayMetrics().heightPixels/1.5 - playerImage.getHeight()/2);
+        float playerX = getResources().getDisplayMetrics().widthPixels/2;
+        float playerY = (float)(getResources().getDisplayMetrics().heightPixels/1.5 - playerImage.getHeight()/2);
         player = new Player(playerImage, playerX - playerImage.getWidth()/2, playerY);
         gameObjects.add(player);
 
@@ -93,6 +104,7 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
         Sensor sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME);
 
+        //Set view to focused
         setFocusable(true);
     }
 
@@ -101,14 +113,15 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        //Starting MainThread - which keeps updating and drawing the gamePanel
         thread  = new MainThread(getHolder(), this);
-
         thread.setRunning(true);
         thread.start();
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
+        //On surface destroyed, keep trying to stop the main thread.
         boolean retry = true;
         while (retry) {
             try {
@@ -123,6 +136,8 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
 
     @Override
     public  boolean onTouchEvent(MotionEvent event) {
+        //If screen is being touched, change the speed of the car
+        //If the screen is touched on the right side - accelerate, otherwise - brake
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_MOVE:
@@ -139,19 +154,28 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
         return true;
     }
 
+    /**
+     * Updating all game objects values
+     */
     public void update() {
+        //Change the car speed if needed
         controlSpeed();
 
+        //Update all game objects
         for (GameObject obj: gameObjects){
+            //If object is CoinManager, also update the coordinates where the coins are being collected
             if (obj.getClass() == CoinsManager.class){
-                ((CoinsManager)obj).updateCollectionField((int)player.getX(), (int)playerY, (int)player.getX() + playerImage.getWidth(), (int)playerY + playerImage.getHeight());
+                ((CoinsManager)obj).updateCollectionField((int)player.getX(), (int)player.getY(),
+                        (int)player.getX() + playerImage.getWidth(), (int)player.getY() + playerImage.getHeight());
+            //If the object is OpponentsManager, check if the player has collided with something, if yes - end game.
             } else if (obj.getClass() == OpponentsManager.class){
-                collided = ((OpponentsManager)obj).checkCollision((int)player.getX(), (int)playerY,
-                        (int)player.getX() + player.getImage().getWidth(), (int)playerY + player.getImage().getWidth());
+                collided = collided || ((OpponentsManager)obj).checkCollision((int)player.getX(), (int)player.getY(),
+                        (int)player.getX() + player.getImage().getWidth(), (int)player.getY() + player.getImage().getWidth());
                 if (collided) {
                     endGame();
                 }
             }
+            //Do not update Player object - it gets updated seperately
             if(obj.getClass() != Player.class) {
                 obj.update((int) speed);
             }
@@ -162,7 +186,9 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
     public void draw(Canvas canvas) {
         super.draw(canvas);
 
+        //Draw background
         canvas.drawColor(Color.WHITE);
+        //Draw each object
         for (GameObject obj : gameObjects){
             obj.draw(canvas);
         }
@@ -170,14 +196,20 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
 
     @Override
     public void onSensorChanged(SensorEvent event) {
+        //Calculate new x coordinate for the player based on phone's movement
         float newX = -event.values[0]/(float)Math.pow(speed, 0.1) + player.getX();
+        //Check if phone was tilted enough to change x coordinate both on the right and left sides
         if (event.values[0] > 1 && newX > 0) {
             player.update(newX);
         } else if (event.values[0] < -1 && newX + playerImage.getWidth() < getResources().getDisplayMetrics().widthPixels) {
             player.update(newX);
         }
 
+        //Check if the car is now on the gravel or hitting a wall
         String roadStatus = road.checkRoadPosition(player.getX(), player.getX() + playerImage.getWidth());
+
+        //If car is on the gravel, it will have to brake,
+        //if it hit the wall, collided set to true and will end the game
         if (roadStatus == "Gravel") {
             carStatus = "Brake";
         } else if (roadStatus == "Wall") {
@@ -188,13 +220,16 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) { }
 
+    /**
+     * Controling speed based on car's status
+     */
     private void controlSpeed(){
         switch (carStatus){
             case "Throttle":
-                speed += 0.3 - speed*0.004;
+                speed += 0.3 - speed*0.004;         //Higher the speed, slower it accelerates
                 break;
             case "Brake":
-                if (speed >= 1) {
+                if (speed >= 1) {                   //If braking, slow down until the speed is 1
                     speed -= 0.4;
                 }
                 break;
@@ -203,9 +238,17 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
         }
     }
 
+    /**
+     * Method to end the game
+     */
     private void endGame(){
+        //Stop thread
         thread.setRunning(false);
+
+        //Create new intent for EndGamActity
         Intent intent = new Intent().setClass(getContext(), EndGameActivity.class);
+
+        //Pass data to the new intent, it will be used to save highscores
         for (GameObject gameObject: gameObjects){
             if (gameObject.getClass() == PointsText.class){
                 intent.putExtra("COINS", ((PointsText)gameObject).getPoints());
@@ -219,6 +262,8 @@ public class GamePanel extends SurfaceView implements SurfaceHolder.Callback, Se
                 intent.putExtra("TRACK", ((Road)gameObject).getRoadType());
             }
         }
+
+        //Start new activity
         getContext().startActivity(intent);
     }
 }
